@@ -52,6 +52,7 @@ Configurable options, shown here with defaults:
 ```ruby
 set :composer_install_flags, '--no-dev --no-interaction --quiet --optimize-autoloader'
 set :composer_roles, :all
+set :composer_working_dir, -> { fetch(:release_path) }
 set :composer_dump_autoload_flags, '--optimize'
 set :composer_download_url, "https://getcomposer.org/installer"
 set :composer_version, '1.0.0-alpha8' #(default: not set)
@@ -66,7 +67,7 @@ deployment (composer.phar is install in the shared path).
 SSHKit.config.command_map[:composer] = "php #{shared_path.join("composer.phar")}"
 
 namespace :deploy do
-  before :starting, 'composer:install_executable'
+  after :starting, 'composer:install_executable'
 end
 ```
 
@@ -89,6 +90,18 @@ task :my_custom_composer_task do
 end
 ```
 
+### Removing the default install task
+
+If you do not want to run the default install task on `deploy:updated`, (for 
+example, if you do not have root level dependencies stored in a `composer.json`
+you can remove it by adding the following line to your `config/deploy.rb`:
+
+```ruby
+Rake::Task['deploy:updated'].prerequisites.delete('composer:install')
+```
+
+You can then call `composer.install` task within your own defined tasks, at an 
+appropriate juncture.
 
 ## Contributing
 

@@ -3,9 +3,9 @@ namespace :composer do
     Installs composer.phar to the shared directory
     In order to use the .phar file, the composer command needs to be mapped:
       SSHKit.config.command_map[:composer] = "\#{shared_path.join("composer.phar")}"
-    This is best used before deploy:starting:
+    This is best used after deploy:starting:
       namespace :deploy do
-        before :starting, 'composer:install_executable'
+        after :starting, 'composer:install_executable'
       end
   DESC
   task :install_executable do
@@ -23,7 +23,7 @@ namespace :composer do
   task :run, :command do |t, args|
     args.with_defaults(:command => :list)
     on release_roles(fetch(:composer_roles)), in: :groups, limit: fetch(:rolling_group_size), wait: fetch(:rolling_group_wait) do
-      within release_path do
+      within fetch(:composer_working_dir) do
         execute :composer, args[:command], *args.extras
       end
     end
@@ -58,12 +58,14 @@ namespace :composer do
   end
 
   before 'deploy:updated', 'composer:install'
+  before 'deploy:reverted', 'composer:install'
 end
 
 namespace :load do
   task :defaults do
     set :composer_install_flags, '--no-dev --prefer-dist --no-interaction --quiet --optimize-autoloader'
     set :composer_roles, :all
+    set :composer_working_dir, -> { fetch(:release_path) }
     set :composer_dump_autoload_flags, '--optimize'
     set :composer_download_url, "https://getcomposer.org/installer"
   end
